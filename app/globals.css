@@ -6,8 +6,6 @@
   src: url("https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;700&display=swap");
 }
 
-@custom-variant dark (&:is(.dark *));
-
 :root {
   /* Replaced all oklch colors with hex equivalents for html2canvas/html2pdf compatibility */
   --background: #ffffff;
@@ -134,7 +132,6 @@
   font-family: "Noto Sans CJK", sans-serif;
 }
 
-:root
-{
+:root {
   --grid-color: #97d6f7;
 }

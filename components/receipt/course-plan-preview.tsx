@@ -1,71 +1,58 @@
-"use client"
+// components/receipt/course-plan-preview.tsx
 
-import React from "react"
-import Image from "next/image"
-import logo from "@/assets/logo.png"
+"use client";
+
+import React from "react";
+import Image from "next/image";
+import logo from "@/assets/logo.png";
 
 export interface Lesson {
-  name: string
-  dateTime: string
+  name: string;
+  dateTime: string;
 }
 
+// Reuse the type, but we know some fields are optional here
 export interface FormDataType {
-  receiptNo: string
-  studentName: string
-  studentCode: string
-  gender: string
-  issueDate: string
-  classCode: string
-  courseCode: string
-  courseName: string
-  lessons: Lesson[]
-  paymentMethod: string
-  paymentDate: string
+  type?: "receipt" | "course_plan";
+  receiptNo?: string;
+  studentName: string;
+  studentCode?: string;
+  gender: string;
+  issueDate: string;
+  courseCode: string;
+  lessons: Lesson[];
+  paymentMethod: string;
+  paymentDate: string;
 }
 
-interface ReceiptPreviewProps {
-  formData: FormDataType
-  isExport?: boolean
+interface CoursePlanPreviewProps {
+  formData: FormDataType;
+  isExport?: boolean;
 }
 
-// ---------------------------------------------------------
-// NEW: Robust Manual Formatter (Guarantees T removal)
-// ---------------------------------------------------------
 const formatDisplayDate = (val: string) => {
-  if (!val) return ""
-
-  // Case 1: Handle DateTime (e.g., "2025-12-10T14:30")
+  if (!val) return "";
   if (val.includes("T")) {
-    const [datePart, timePart] = val.split("T")
-    
-    // Format Date: YYYY-MM-DD -> DD/MM/YYYY
-    const [year, month, day] = datePart.split("-")
-    
-    // Format Time: HH:mm -> 12-hour format
-    const [hourStr, minute] = timePart.split(":")
-    const hour = parseInt(hourStr, 10)
-    const ampm = hour >= 12 ? "PM" : "AM"
-    const hour12 = hour % 12 || 12
-    
-    return `${day}/${month}/${year}, ${hour12}:${minute} ${ampm}`
+    const [datePart, timePart] = val.split("T");
+    const [year, month, day] = datePart.split("-");
+    const [hourStr, minute] = timePart.split(":");
+    const hour = parseInt(hourStr, 10);
+    const ampm = hour >= 12 ? "PM" : "AM";
+    const hour12 = hour % 12 || 12;
+    return `${day}/${month}/${year}, ${hour12}:${minute} ${ampm}`;
   }
-
-  // Case 2: Handle Date Only (e.g., "2025-12-10")
   if (val.includes("-")) {
-    const [year, month, day] = val.split("-")
-    return `${day}/${month}/${year}`
+    const [year, month, day] = val.split("-");
+    return `${day}/${month}/${year}`;
   }
+  return val;
+};
 
-  // Fallback: Return original if format is completely unknown
-  return val
-}
-
-export function ReceiptPreview({ formData, isExport = false }: ReceiptPreviewProps) {
-  const containsChinese = (text = "") => /[\u4e00-\u9fff]/.test(text)
-
-  // -------------------
-  // Configuration
-  // -------------------
+export function CoursePlanPreview({
+  formData,
+  isExport = false,
+}: CoursePlanPreviewProps) {
+  const containsChinese = (text = "") => /[\u4e00-\u9fff]/.test(text);
 
   const spacing = {
     containerPadding: "p-8",
@@ -81,7 +68,7 @@ export function ReceiptPreview({ formData, isExport = false }: ReceiptPreviewPro
     lessonGridGap: "gap-3",
     lessonColumnSpacing: "space-y-3",
     lessonRowGap: "gap-2",
-  }
+  };
 
   const textSizes = {
     headerLarge: "text-4xl",
@@ -91,7 +78,7 @@ export function ReceiptPreview({ formData, isExport = false }: ReceiptPreviewPro
     indexNumber: "text-3xl font-medium min-w-[35px]",
     paidAmount: "text-sm font-semibold",
     companyInfo: "text-xs",
-  }
+  };
 
   const colors = {
     text: "#111111",
@@ -100,13 +87,9 @@ export function ReceiptPreview({ formData, isExport = false }: ReceiptPreviewPro
     heading: "#111111",
     indexNumber: "#9CA3AF",
     lineThrough: "#6B7280",
-  }
+  };
 
-  const companyTextStyle = { color: colors.text, fontSize: "0.75rem" }
-
-  // -------------------
-  // Helper Components
-  // -------------------
+  const companyTextStyle = { color: colors.text, fontSize: "0.75rem" };
 
   const SectionHeader = ({ title }: { title: string }) => (
     <div className={spacing.sectionTitleMarginBottom}>
@@ -120,7 +103,7 @@ export function ReceiptPreview({ formData, isExport = false }: ReceiptPreviewPro
         }}
       />
     </div>
-  )
+  );
 
   return (
     <div
@@ -129,7 +112,7 @@ export function ReceiptPreview({ formData, isExport = false }: ReceiptPreviewPro
     >
       {/* ---------------- Header ---------------- */}
       <div className="flex w-full justify-between items-start">
-        <div className="flex-shrink-0">
+        <div className="shrink-0">
           <Image
             src={logo}
             alt="Company Logo"
@@ -141,12 +124,18 @@ export function ReceiptPreview({ formData, isExport = false }: ReceiptPreviewPro
         </div>
 
         <div className="flex w-full justify-end">
-          <div className={`flex flex-col justify-end ${spacing.headerStackGap}`}>
-            <p style={{ ...companyTextStyle, fontWeight: 600 }}>Unicorn Vision Design Limited</p>
+          <div
+            className={`flex flex-col justify-end ${spacing.headerStackGap}`}
+          >
+            <p style={{ ...companyTextStyle, fontWeight: 600 }}>
+              Unicorn Vision Design Limited
+            </p>
             <p style={companyTextStyle}>No.903, 1202, Vogue Centre,</p>
             <p style={companyTextStyle}>696 Castle Peak Road,</p>
             <p style={companyTextStyle}>KL, HK</p>
-            <div className={`flex justify-end ${spacing.contactRowGap} ${spacing.contactRowMarginTop}`}>
+            <div
+              className={`flex justify-end ${spacing.contactRowGap} ${spacing.contactRowMarginTop}`}
+            >
               <span style={companyTextStyle}>Tel: 3168 6878</span>
               <span style={companyTextStyle}>Fax: 3168 6879</span>
             </div>
@@ -154,40 +143,38 @@ export function ReceiptPreview({ formData, isExport = false }: ReceiptPreviewPro
         </div>
       </div>
 
-      {/* ---------------- Title ---------------- */}
+      {/* ---------------- Title (Changed to Course Plan) ---------------- */}
       <h1
         className={`-mt-3 text-center font-semibold ${spacing.titleMarginBottom} ${textSizes.headerLarge}`}
         style={{ color: colors.heading }}
       >
-        Receipt
+        Course Plan
       </h1>
 
-      {/* ---------------- Basic Info ---------------- */}
+      {/* ---------------- Basic Info (Removed ReceiptNo & StudentCode) ---------------- */}
       <section>
         <SectionHeader title="Basic Info" />
         <div className={`grid grid-cols-2 ${spacing.standardGridGap}`}>
+          {/* Left Column */}
           <div className={`${textSizes.bodyText} ${spacing.tightListSpacing}`}>
-            <div>Receipt No: {formData.receiptNo}</div>
-            {/* UPDATED: Applied formatter */}
+            {/* REMOVED RECEIPT NO */}
             <div>Issue Date: {formatDisplayDate(formData.issueDate)}</div>
             <div>
               Student Name:{" "}
-              <span className={containsChinese(formData.studentName) ? "chinese" : ""}>
+              <span
+                className={
+                  containsChinese(formData.studentName) ? "chinese" : ""
+                }
+              >
                 {formData.studentName}
               </span>
             </div>
-            <div>Class Code: {formData.classCode}</div>
           </div>
+          {/* Right Column */}
           <div className={`${textSizes.bodyText} ${spacing.tightListSpacing}`}>
-            <div>Student Code: {formData.studentCode}</div>
+            {/* REMOVED STUDENT CODE */}
             <div>Course Code: {formData.courseCode}</div>
             <div>Gender: {formData.gender}</div>
-            <div>
-              Course Name:{" "}
-              <span className={`font-bold ${containsChinese(formData.courseName) ? "chinese" : ""}`}>
-                {formData.courseName}
-              </span>
-            </div>
           </div>
         </div>
       </section>
@@ -195,39 +182,52 @@ export function ReceiptPreview({ formData, isExport = false }: ReceiptPreviewPro
       {/* ---------------- Lesson Info ---------------- */}
       <section className={spacing.sectionVerticalMargin}>
         <SectionHeader title="Lesson Info" />
-        <div className={`${spacing.sectionVerticalMargin} ${spacing.tightListSpacing}`}>
+        <div
+          className={`${spacing.sectionVerticalMargin} ${spacing.tightListSpacing}`}
+        >
           <p className={textSizes.bodyText}>Total Lessons: 12 Lessons</p>
-          <p className={textSizes.bodyText}>Duration: 1 Hour 25 Minutes / Lesson</p>
+          <p className={textSizes.bodyText}>
+            Duration: 1 Hour 25 Minutes / Lesson
+          </p>
           <p className={textSizes.bodyText}>Lessons Enrolled:</p>
 
           <div className={`grid grid-cols-2 ${spacing.lessonGridGap}`}>
             {/* Left column */}
             <div className={spacing.lessonColumnSpacing}>
-              {formData.lessons.slice(0, Math.ceil(formData.lessons.length / 2)).map((lesson, index) => (
-                <div key={index} className={`flex ${spacing.lessonRowGap}`}>
-                  <div className="flex justify-center items-center">
-                    <div className={textSizes.indexNumber} style={{ color: colors.indexNumber }}>
-                      {(index + 1).toString().padStart(2, "0")}
+              {formData.lessons
+                .slice(0, Math.ceil(formData.lessons.length / 2))
+                .map((lesson, index) => (
+                  <div key={index} className={`flex ${spacing.lessonRowGap}`}>
+                    <div className="flex justify-center items-center">
+                      <div
+                        className={textSizes.indexNumber}
+                        style={{ color: colors.indexNumber }}
+                      >
+                        {(index + 1).toString().padStart(2, "0")}
+                      </div>
+                    </div>
+                    <div className="flex-1">
+                      {lesson.name && (
+                        <p
+                          className={`${textSizes.bodyBold} ${
+                            containsChinese(lesson.name) ? "chinese" : ""
+                          }`}
+                          style={{ color: colors.text }}
+                        >
+                          {lesson.name}
+                        </p>
+                      )}
+                      {lesson.dateTime && (
+                        <p
+                          className={textSizes.bodyText}
+                          style={{ color: colors.text }}
+                        >
+                          {formatDisplayDate(lesson.dateTime)}
+                        </p>
+                      )}
                     </div>
                   </div>
-                  <div className="flex-1">
-                    {lesson.name && (
-                      <p
-                        className={`${textSizes.bodyBold} ${containsChinese(lesson.name) ? "chinese" : ""}`}
-                        style={{ color: colors.text }}
-                      >
-                        {lesson.name}
-                      </p>
-                    )}
-                    {lesson.dateTime && (
-                      <p className={textSizes.bodyText} style={{ color: colors.text }}>
-                        {/* UPDATED: Applied formatter */}
-                        {formatDisplayDate(lesson.dateTime)}
-                      </p>
-                    )}
-                  </div>
-                </div>
-              ))}
+                ))}
             </div>
 
             {/* Right column */}
@@ -235,30 +235,41 @@ export function ReceiptPreview({ formData, isExport = false }: ReceiptPreviewPro
               {formData.lessons
                 .slice(Math.ceil(formData.lessons.length / 2))
                 .map((lesson, index) => {
-                  const originalIndex = index + Math.ceil(formData.lessons.length / 2)
+                  const originalIndex =
+                    index + Math.ceil(formData.lessons.length / 2);
                   return (
-                    <div key={originalIndex} className={`flex ${spacing.lessonRowGap}`}>
-                      <div className={textSizes.indexNumber} style={{ color: colors.indexNumber }}>
+                    <div
+                      key={originalIndex}
+                      className={`flex ${spacing.lessonRowGap}`}
+                    >
+                      <div
+                        className={textSizes.indexNumber}
+                        style={{ color: colors.indexNumber }}
+                      >
                         {(originalIndex + 1).toString().padStart(2, "0")}
                       </div>
                       <div className="flex-1">
                         {lesson.name && (
                           <p
-                            className={`${textSizes.bodyBold} ${containsChinese(lesson.name) ? "chinese" : ""}`}
+                            className={`${textSizes.bodyBold} ${
+                              containsChinese(lesson.name) ? "chinese" : ""
+                            }`}
                             style={{ color: colors.text }}
                           >
                             {lesson.name}
                           </p>
                         )}
                         {lesson.dateTime && (
-                          <p className={textSizes.bodyText} style={{ color: colors.text }}>
-                            {/* UPDATED: Applied formatter */}
+                          <p
+                            className={textSizes.bodyText}
+                            style={{ color: colors.text }}
+                          >
                             {formatDisplayDate(lesson.dateTime)}
                           </p>
                         )}
                       </div>
                     </div>
-                  )
+                  );
                 })}
             </div>
           </div>
@@ -316,7 +327,6 @@ export function ReceiptPreview({ formData, isExport = false }: ReceiptPreviewPro
             </p>
             {formData.paymentDate && (
               <p className={textSizes.bodyText} style={{ color: colors.text }}>
-                {/* UPDATED: Applied formatter */}
                 Payment Date: {formatDisplayDate(formData.paymentDate)}
               </p>
             )}
@@ -332,12 +342,15 @@ export function ReceiptPreview({ formData, isExport = false }: ReceiptPreviewPro
             <p className={textSizes.bodyBold} style={{ color: colors.text }}>
               Payment of Fees
             </p>
-            <ul className={`${spacing.bulletListIndent} list-disc ${spacing.tightListSpacing}`}>
+            <ul
+              className={`${spacing.bulletListIndent} list-disc ${spacing.tightListSpacing}`}
+            >
               <li className={textSizes.bodyText} style={{ color: colors.text }}>
                 Fees must be paid in full before students attend classes.
               </li>
               <li className={textSizes.bodyText} style={{ color: colors.text }}>
-                Promotion/discount bookings are non-refundable and non-transferable.
+                Promotion/discount bookings are non-refundable and
+                non-transferable.
               </li>
             </ul>
           </div>
@@ -345,7 +358,9 @@ export function ReceiptPreview({ formData, isExport = false }: ReceiptPreviewPro
             <p className={textSizes.bodyBold} style={{ color: colors.text }}>
               Refund Policy
             </p>
-            <ul className={`${spacing.bulletListIndent} list-disc ${spacing.tightListSpacing}`}>
+            <ul
+              className={`${spacing.bulletListIndent} list-disc ${spacing.tightListSpacing}`}
+            >
               <li className={textSizes.bodyText} style={{ color: colors.text }}>
                 We regret we cannot issue refunds once payment is made.
               </li>
@@ -354,5 +369,5 @@ export function ReceiptPreview({ formData, isExport = false }: ReceiptPreviewPro
         </div>
       </section>
     </div>
-  )
+  );
 }
