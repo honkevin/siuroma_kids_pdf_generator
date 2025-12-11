@@ -4,7 +4,7 @@ import type React from "react";
 import { useState, useEffect } from "react";
 import { Input } from "@/components/ui/input";
 import { Save, Loader2 } from "lucide-react";
-import { FormDataType } from "@/app/page"; // Ensure this path matches your project
+import type { FormDataType } from "@/types/index"; // Update path to where FormDataType is actually defined
 import { db } from "@/lib/firebase"; // Ensure this matches your firebase config path
 import { collection, getDocs, doc, getDoc } from "firebase/firestore";
 

@@ -1,10 +1,10 @@
 "use client";
 
 import React, { useState, useRef, useEffect, useLayoutEffect } from "react";
-import { TopBar, Tab } from "@/components/layout/top-bar";
+import { TopBar } from "@/components/layout/top-bar";
 import { Ribbon } from "@/components/layout/ribbon";
 import { FileExplorer } from "@/components/file-explorer";
-import { ReceiptPreview, Lesson } from "@/components/receipt/receipt-preview";
+import { ReceiptPreview } from "@/components/receipt/receipt-preview";
 import { CoursePlanPreview } from "@/components/receipt/course-plan-preview";
 import { ZoomIn, ZoomOut, Download, FileText, Calendar } from "lucide-react";
 import {
@@ -17,133 +17,34 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Button } from "@/components/ui/button";
 
-// 🔥 Firestore imports
+// Imports from root folders
 import {
-  collection,
-  doc,
-  getDocs,
-  orderBy,
-  query,
-  setDoc,
-  deleteDoc,
-} from "firebase/firestore";
-import { db } from "@/lib/firebase";
-
-// ---------- Types ----------
-export interface FormDataType {
-  type?: "receipt" | "course_plan";
-  receiptNo?: string;
-  studentName: string;
-  studentCode: string;
-  gender: string;
-  issueDate: string;
-  courseCode: string;
-  lessons: Lesson[];
-  paymentMethod: string;
-  paymentDate: string;
-}
-
-interface ReceiptTab extends Tab {
-  data: FormDataType;
-  savedFileId?: string;
-  zoom: number;
-  scrollTop: number;
-}
-
-interface SavedFile {
-  id: string;
-  title: string;
-  lastModified: number;
-  data: FormDataType;
-}
-
-// ---------- Constants ----------
-const DEFAULT_LESSONS = Array(12).fill({ name: "", dateTime: "" });
-
-const NEW_RECEIPT_TEMPLATE: FormDataType = {
-  type: "receipt",
-  receiptNo: "",
-  studentName: "",
-  studentCode: "",
-  gender: "",
-  issueDate: new Date().toISOString().split("T")[0],
-  courseCode: "",
-  lessons: DEFAULT_LESSONS,
-  paymentMethod: "",
-  paymentDate: "",
-};
-
-const NEW_COURSE_PLAN_TEMPLATE: FormDataType = {
-  type: "course_plan",
-  studentName: "",
-  studentCode: "",
-  gender: "",
-  issueDate: new Date().toISOString().split("T")[0],
-  courseCode: "",
-  lessons: DEFAULT_LESSONS,
-  paymentMethod: "",
-  paymentDate: "",
-};
+  FormDataType,
+  ReceiptTab,
+  SavedFile,
+  NEW_COURSE_PLAN_TEMPLATE,
+  NEW_RECEIPT_TEMPLATE,
+} from "@/types";
+import { useFileSystem } from "@/hooks/use-filesystem";
 
 const INITIAL_ZOOM = 1.1;
 const INITIAL_SCROLL_TOP = 0;
 
-// ---------- Component ----------
-export default function App() {
-  // --- Persistent Storage (state) ---
-  const [savedFiles, setSavedFiles] = useState<SavedFile[]>([]);
-
-  // 🔥 Load from Firestore on mount
-  useEffect(() => {
-    // optional: fast local cache first
-    const stored = localStorage.getItem("rc_saved_files");
-    if (stored) {
-      try {
-        setSavedFiles(JSON.parse(stored));
-      } catch (e) {
-        console.error("Local load failed", e);
-      }
-    }
-
-    const fetchFromFirestore = async () => {
-      try {
-        const q = query(
-          collection(db, "entries"),
-          orderBy("lastModified", "desc")
-        );
-        const snap = await getDocs(q);
-        const files: SavedFile[] = snap.docs.map((d) => {
-          const data = d.data() as Omit<SavedFile, "id">;
-          return { id: d.id, ...data };
-        });
-        setSavedFiles(files);
-        localStorage.setItem("rc_saved_files", JSON.stringify(files));
-      } catch (e) {
-        console.error("Firestore load failed", e);
-      }
-    };
-
-    fetchFromFirestore();
-  }, []);
-
-  // Helper to keep state + localStorage in sync
-  const persistFiles = (files: SavedFile[]) => {
-    setSavedFiles(files);
-    localStorage.setItem("rc_saved_files", JSON.stringify(files));
-  };
+export default function Home() {
+  // --- Logic Hook ---
+  const { savedFiles, saveFile, deleteFile, duplicateFile } = useFileSystem();
 
   // --- View State ---
   const [isFilesView, setIsFilesView] = useState(true);
   const [tabs, setTabs] = useState<ReceiptTab[]>([]);
   const [activeTabId, setActiveTabId] = useState<string>("");
-
   const [zoom, setZoom] = useState(INITIAL_ZOOM);
   const [isExporting, setIsExporting] = useState(false);
   const [showSaveConfirm, setShowSaveConfirm] = useState(false);
   const [isNewEntryDialogOpen, setIsNewEntryDialogOpen] = useState(false);
 
+  // For background PDF generation
   const [tempExportData, setTempExportData] = useState<FormDataType | null>(
     null
   );
@@ -151,45 +52,15 @@ export default function App() {
   const exportRef = useRef<HTMLDivElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
+  // Derived state
   const activeTab = tabs.find((t) => t.id === activeTabId);
   const activeIndex = activeTab
     ? tabs.findIndex((t) => t.id === activeTabId)
     : -1;
   const hasActiveTab = !!activeTab && activeIndex !== -1;
+  const showEditor = !isFilesView && hasActiveTab;
 
-  // --- Keyboard Shortcuts ---
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.ctrlKey || e.metaKey) {
-        if (e.key === "s") {
-          e.preventDefault();
-          if (!isFilesView && hasActiveTab) handleSaveRequest();
-        }
-        if (e.key === "t") {
-          e.preventDefault();
-          handleNewEntry();
-        }
-        if (e.key === "w") {
-          e.preventDefault();
-          if (!isFilesView && hasActiveTab) handleTabClose(activeTabId);
-        }
-      }
-    };
-
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [activeTabId, isFilesView, hasActiveTab, tabs]);
-
-  // --- PDF logic ---
-  useEffect(() => {
-    if (tempExportData && exportRef.current) {
-      const timer = setTimeout(() => {
-        generatePdf(tempExportData, true);
-      }, 100);
-      return () => clearTimeout(timer);
-    }
-  }, [tempExportData]);
-
+  // --- PDF Generation ---
   const generatePdf = async (data: FormDataType, isBackground = false) => {
     if (!exportRef.current) return;
     setIsExporting(true);
@@ -225,74 +96,53 @@ export default function App() {
     }
   };
 
-  const handleEditorExport = () => {
-    if (!hasActiveTab) return;
-    generatePdf(activeTab.data);
-  };
-
-  const handleDownloadFile = (file: SavedFile) => {
-    setTempExportData(file.data);
-  };
-
-  // --- Tab switching / zoom / scroll ---
-  useLayoutEffect(() => {
-    if (hasActiveTab && !isFilesView) {
-      setZoom(activeTab.zoom);
-      setTimeout(() => {
-        if (scrollContainerRef.current) {
-          scrollContainerRef.current.scrollTop = activeTab.scrollTop;
-        }
-      }, 0);
-    }
-  }, [activeTabId, isFilesView, hasActiveTab, activeTab]);
-
-  const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
-    if (hasActiveTab) {
-      activeTab.scrollTop = e.currentTarget.scrollTop;
-    }
-  };
-
-  const updateZoom = (newZoomVal: number) => {
-    const clamped = Math.min(Math.max(0.3, newZoomVal), 2.5);
-    setZoom(clamped);
-    if (hasActiveTab) {
-      activeTab.zoom = clamped;
-    }
-  };
-
   useEffect(() => {
-    const container = scrollContainerRef.current;
-    if (!container) return;
+    if (tempExportData && exportRef.current) {
+      const timer = setTimeout(() => generatePdf(tempExportData, true), 100);
+      return () => clearTimeout(timer);
+    }
+  }, [tempExportData]);
 
-    const handleWheel = (e: WheelEvent) => {
+  // --- Keyboard Shortcuts ---
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
       if (e.ctrlKey || e.metaKey) {
-        e.preventDefault();
-        const zoomDelta = -e.deltaY * 0.01;
-
-        setZoom((prevZoom) => {
-          const newZoom = prevZoom + zoomDelta;
-          const clamped = Math.min(Math.max(0.3, newZoom), 2.5);
-          if (hasActiveTab) activeTab!.zoom = clamped;
-          return clamped;
-        });
+        if (e.key === "s") {
+          e.preventDefault();
+          if (!isFilesView && hasActiveTab) setShowSaveConfirm(true);
+        }
+        if (e.key === "t") {
+          e.preventDefault();
+          setIsNewEntryDialogOpen(true);
+        }
+        if (e.key === "w") {
+          e.preventDefault();
+          if (!isFilesView && hasActiveTab) handleTabClose(activeTabId);
+        }
       }
     };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [activeTabId, isFilesView, hasActiveTab, tabs]);
 
-    container.addEventListener("wheel", handleWheel, { passive: false });
-    return () => {
-      container.removeEventListener("wheel", handleWheel);
-    };
-  }, [hasActiveTab, activeTab, isFilesView]);
-
-  // --- Actions / CRUD ---
-  const handleNewEntry = () => {
-    setIsNewEntryDialogOpen(true);
+  // --- Tab Management ---
+  const handleTabClose = (id: string) => {
+    if (tabs.length === 1) {
+      setTabs([]);
+      setActiveTabId("");
+      setIsFilesView(true);
+      return;
+    }
+    const newTabs = tabs.filter((t) => t.id !== id);
+    setTabs(newTabs);
+    if (activeTabId === id && newTabs.length > 0) {
+      setActiveTabId(newTabs[newTabs.length - 1].id);
+    }
   };
 
   const createEntry = (type: "receipt" | "course_plan") => {
     const newId = Date.now().toString();
     const newNum = tabs.length + 1;
-
     const template =
       type === "course_plan"
         ? { ...NEW_COURSE_PLAN_TEMPLATE }
@@ -309,84 +159,6 @@ export default function App() {
     setActiveTabId(newId);
     setIsFilesView(false);
     setIsNewEntryDialogOpen(false);
-  };
-
-  const handleTabClose = (id: string) => {
-    if (tabs.length === 1) {
-      setTabs([]);
-      setActiveTabId("");
-      setIsFilesView(true);
-      return;
-    }
-    const newTabs = tabs.filter((t) => t.id !== id);
-    setTabs(newTabs);
-    if (activeTabId === id && newTabs.length > 0) {
-      setActiveTabId(newTabs[newTabs.length - 1].id);
-    }
-  };
-
-  const updateActiveData = (field: keyof FormDataType, value: any) => {
-    if (!hasActiveTab) return;
-    const newTabs = [...tabs];
-    const tab = newTabs[activeIndex];
-    tab.data = { ...tab.data, [field]: value };
-
-    if (!tab.savedFileId) {
-      if (field === "studentName" && value) tab.title = value;
-      else if (field === "receiptNo" && value) tab.title = value;
-    }
-    setTabs(newTabs);
-  };
-
-  const handleSaveRequest = () => {
-    if (!hasActiveTab) return;
-    setShowSaveConfirm(true);
-  };
-
-  // 🔥 Save to Firestore
-  const executeSave = async () => {
-    if (!hasActiveTab) return;
-
-    const fileId = activeTab.savedFileId || crypto.randomUUID();
-    const title =
-      activeTab.data.studentName ||
-      activeTab.data.receiptNo ||
-      (activeTab.data.type === "course_plan"
-        ? "Untitled Plan"
-        : "Untitled Receipt");
-
-    const newFile: SavedFile = {
-      id: fileId,
-      title,
-      lastModified: Date.now(),
-      data: activeTab.data,
-    };
-
-    try {
-      await setDoc(doc(collection(db, "entries"), fileId), {
-        title: newFile.title,
-        lastModified: newFile.lastModified,
-        data: newFile.data,
-      });
-    } catch (e) {
-      console.error("Firestore save failed", e);
-    }
-
-    // Update local cache + tabs
-    const existingIdx = savedFiles.findIndex((f) => f.id === fileId);
-    const newFileList = [...savedFiles];
-    if (existingIdx >= 0) {
-      newFileList[existingIdx] = newFile;
-    } else {
-      newFileList.unshift(newFile);
-    }
-
-    persistFiles(newFileList);
-    const newTabs = [...tabs];
-    newTabs[activeIndex].savedFileId = fileId;
-    newTabs[activeIndex].title = title;
-    setTabs(newTabs);
-    setShowSaveConfirm(false);
   };
 
   const handleOpenFile = (file: SavedFile) => {
@@ -408,64 +180,58 @@ export default function App() {
     setIsFilesView(false);
   };
 
-  const handleDeleteFile = async (id: string) => {
-    const newFiles = savedFiles.filter((f) => f.id !== id);
-    persistFiles(newFiles);
+  const executeSave = async () => {
+    if (!hasActiveTab) return;
 
-    try {
-      await deleteDoc(doc(db, "entries", id));
-      console.log("Entry deleted from Firestore");
-    } catch (e) {
-      console.error("Failed to delete from Firestore", e);
-    }
-  };
-
-  // 🔥 UPDATED: Duplicate functionality with Firestore support
-  const handleDuplicateFile = async (file: SavedFile) => {
-    // 1. Prepare new data
-    const newId = crypto.randomUUID(); // Generate unique ID
-    const newTitle = `${file.title} (Copy)`;
-    const timestamp = Date.now();
+    const fileId = activeTab.savedFileId || crypto.randomUUID();
+    const title =
+      activeTab.data.studentName || activeTab.data.receiptNo || "Untitled";
 
     const newFile: SavedFile = {
-      ...file,
-      id: newId,
-      title: newTitle,
-      lastModified: timestamp,
-      // Create a shallow copy of data to ensure we don't mutate state unexpectedly
-      data: { ...file.data },
+      id: fileId,
+      title,
+      lastModified: Date.now(),
+      data: activeTab.data,
     };
 
-    // 2. Optimistic UI update (update list immediately)
-    persistFiles([newFile, ...savedFiles]);
+    await saveFile(newFile);
 
-    // 3. Write to Firestore
-    try {
-      await setDoc(doc(db, "entries", newId), {
-        title: newFile.title,
-        lastModified: newFile.lastModified,
-        data: newFile.data,
-      });
-      console.log("Duplicate saved to Firestore successfully");
-    } catch (e) {
-      console.error("Failed to duplicate file in Firestore", e);
-      // Optional: alert user or rollback state if needed
-    }
+    const newTabs = [...tabs];
+    newTabs[activeIndex].savedFileId = fileId;
+    newTabs[activeIndex].title = title;
+    setTabs(newTabs);
+    setShowSaveConfirm(false);
   };
 
-  const handleToggleFilesView = () => {
-    if (isFilesView) {
-      if (tabs.length === 0) {
-        handleNewEntry();
-      } else {
-        setIsFilesView(false);
-      }
-    } else {
-      setIsFilesView(true);
+  const updateActiveData = (field: string | number | symbol, value: any) => {
+    if (!hasActiveTab) return;
+    const newTabs = [...tabs];
+    const tab = newTabs[activeIndex];
+    tab.data = { ...tab.data, [field]: value };
+
+    if (!tab.savedFileId) {
+      if (field === "studentName" && value) tab.title = value;
+      else if (field === "receiptNo" && value) tab.title = value;
     }
+    setTabs(newTabs);
   };
 
-  const showEditor = !isFilesView && hasActiveTab;
+  // --- Zoom & Scroll Logic ---
+  const updateZoom = (newZoomVal: number) => {
+    const clamped = Math.min(Math.max(0.3, newZoomVal), 2.5);
+    setZoom(clamped);
+    if (hasActiveTab) activeTab.zoom = clamped;
+  };
+
+  useLayoutEffect(() => {
+    if (hasActiveTab && !isFilesView) {
+      setZoom(activeTab.zoom);
+      setTimeout(() => {
+        if (scrollContainerRef.current)
+          scrollContainerRef.current.scrollTop = activeTab.scrollTop;
+      }, 0);
+    }
+  }, [activeTabId, isFilesView]);
 
   const renderPreview = (data: FormDataType, isExport = false) => {
     if (data.type === "course_plan") {
@@ -475,38 +241,37 @@ export default function App() {
     return <ReceiptPreview formData={receiptData} isExport={isExport} />;
   };
 
-  // ---------- JSX ----------
+  // --- Render ---
   return (
     <div className="h-screen w-screen flex flex-col bg-[#f3f4f6] overflow-hidden">
       <TopBar
         tabs={tabs}
         activeTabId={activeTabId}
         isFilesView={isFilesView}
-        onToggleFilesView={handleToggleFilesView}
+        onToggleFilesView={() => setIsFilesView(!isFilesView)}
         onTabChange={setActiveTabId}
         onTabClose={handleTabClose}
-        onNewEntry={handleNewEntry}
+        onNewEntry={() => setIsNewEntryDialogOpen(true)}
       />
 
       {isFilesView || !showEditor ? (
         <FileExplorer
           files={savedFiles}
           onOpen={handleOpenFile}
-          onDelete={handleDeleteFile}
-          onDuplicate={handleDuplicateFile}
-          onNewEntry={handleNewEntry}
-          onDownload={handleDownloadFile}
+          onDelete={deleteFile}
+          onDuplicate={duplicateFile}
+          onNewEntry={() => setIsNewEntryDialogOpen(true)}
+          onDownload={(file) => setTempExportData(file.data)}
         />
       ) : (
         <>
           <Ribbon
             data={activeTab!.data}
             onChange={updateActiveData}
-            onSave={handleSaveRequest}
+            onSave={() => setShowSaveConfirm(true)}
           />
 
           <div className="flex-1 relative overflow-hidden flex flex-col">
-            {/* Zoom / PDF bar */}
             <div className="absolute bottom-6 right-6 z-50 flex items-center gap-2 bg-[#2d2d2d] text-white px-3 py-1.5 rounded-full shadow-lg text-xs">
               <button
                 onClick={() => updateZoom(zoom - 0.1)}
@@ -525,7 +290,7 @@ export default function App() {
               </button>
               <div className="w-px h-4 bg-gray-600 mx-1" />
               <button
-                onClick={handleEditorExport}
+                onClick={() => generatePdf(activeTab.data)}
                 disabled={isExporting}
                 className="flex items-center gap-1 hover:text-green-300 disabled:opacity-50 cursor-pointer"
               >
@@ -536,7 +301,10 @@ export default function App() {
 
             <div
               ref={scrollContainerRef}
-              onScroll={handleScroll}
+              onScroll={(e) => {
+                if (hasActiveTab)
+                  activeTab.scrollTop = e.currentTarget.scrollTop;
+              }}
               className="flex-1 overflow-auto flex justify-center p-10 bg-[#e5e7eb]"
             >
               <div
@@ -557,7 +325,7 @@ export default function App() {
         </>
       )}
 
-      {/* Hidden PDF target */}
+      {/* Hidden PDF Target */}
       <div className="absolute top-0 left-0 -z-50 opacity-0 pointer-events-none overflow-hidden h-0 w-0">
         <div ref={exportRef} className="w-[794px] h-[1123px] bg-white">
           {renderPreview(
@@ -567,23 +335,19 @@ export default function App() {
         </div>
       </div>
 
-      {/* Save Confirmation Dialog */}
       <AlertDialog open={showSaveConfirm} onOpenChange={setShowSaveConfirm}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Save Changes?</AlertDialogTitle>
             <AlertDialogDescription>
-              This will update the entry "{activeTab?.title || "Untitled"}" in
-              your saved files.
+              This will update the entry "{activeTab?.title || "Untitled"}".
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel className="cursor-pointer">
-              Cancel
-            </AlertDialogCancel>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction
               onClick={executeSave}
-              className="bg-blue-600 hover:bg-blue-700 cursor-pointer"
+              className="bg-blue-600 hover:bg-blue-700"
             >
               Confirm Save
             </AlertDialogAction>
@@ -591,19 +355,17 @@ export default function App() {
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* New Entry Type Dialog */}
       <AlertDialog
         open={isNewEntryDialogOpen}
-        onOpenChange={(open) => setIsNewEntryDialogOpen(open)}
+        onOpenChange={setIsNewEntryDialogOpen}
       >
         <AlertDialogContent className="max-w-md">
           <AlertDialogHeader>
             <AlertDialogTitle>Create New Entry</AlertDialogTitle>
             <AlertDialogDescription>
-              Select the type of document you want to create.
+              Select document type.
             </AlertDialogDescription>
           </AlertDialogHeader>
-
           <div className="flex gap-4 py-4 justify-center">
             <button
               onClick={() => createEntry("receipt")}
@@ -614,7 +376,6 @@ export default function App() {
                 Receipt
               </span>
             </button>
-
             <button
               onClick={() => createEntry("course_plan")}
               className="flex flex-col items-center justify-center p-6 bg-gray-50 border-2 border-dashed border-gray-300 hover:border-purple-500 hover:bg-purple-50 rounded-xl transition-all w-32 h-32 group cursor-pointer"
@@ -625,7 +386,6 @@ export default function App() {
               </span>
             </button>
           </div>
-
           <AlertDialogFooter>
             <AlertDialogCancel className="cursor-pointer">
               Cancel
