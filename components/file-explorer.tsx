@@ -1,5 +1,3 @@
-// components/file-explorer.tsx
-
 "use client";
 
 import { useState } from "react";
@@ -12,7 +10,7 @@ import {
   FileText,
   Plus,
   Download,
-  Calendar, // Added icon for Course Plan
+  Calendar,
 } from "lucide-react";
 import { FormDataType } from "@/app/page";
 import { Button } from "@/components/ui/button";
@@ -58,12 +56,13 @@ export function FileExplorer({
 
   const filteredFiles = files.filter((f) => {
     const query = search.toLowerCase();
-    // Safe check for receiptNo since it might be undefined in course plans
+    // Fix 2a: Safe check for both receiptNo and courseCode
     const receiptNo = f.data.receiptNo || "";
+    const courseCode = f.data.courseCode || "";
 
     return (
       f.title.toLowerCase().includes(query) ||
-      f.data.courseCode.toLowerCase().includes(query) ||
+      courseCode.toLowerCase().includes(query) ||
       receiptNo.toLowerCase().includes(query)
     );
   });
@@ -140,7 +139,8 @@ export function FileExplorer({
             ))}
           </div>
         ) : (
-          <div className="bg-white rounded-lg border shadow-sm divide-y">
+          /* Fix 1: Added overflow-hidden to preserve rounded corners on hover */
+          <div className="bg-white rounded-lg border shadow-sm divide-y overflow-hidden">
             {filteredFiles.map((file) => (
               <FileRow
                 key={file.id}
@@ -238,8 +238,9 @@ function FileCard({ file, onOpen, onDelete, onDuplicate, onDownload }: any) {
 
         {/* Metadata Row */}
         <div className="flex items-center gap-2 text-xs text-gray-500 mb-3">
+          {/* Fix 2b: Display "NO COURSE CODE" if missing */}
           <span className="bg-gray-100 px-1.5 py-0.5 rounded text-[10px] font-medium uppercase">
-            {file.data.courseCode || "NO-CODE"}
+            {file.data.courseCode || "NO COURSE CODE"}
           </span>
           <span>{new Date(file.lastModified).toLocaleDateString()}</span>
         </div>
@@ -315,14 +316,17 @@ function FileRow({ file, onOpen, onDelete, onDuplicate, onDownload }: any) {
           </p>
         </div>
 
-        <div className="ml-auto mr-8">
-          <span className="bg-gray-100 text-gray-600 px-2 py-1 rounded text-xs font-mono">
-            {file.data.courseCode}
+        {/* Fix 3: Removed mr-8 so it sits at far right when actions are hidden */}
+        <div className="ml-auto">
+          {/* Fix 2c: Display "NO COURSE CODE" if missing */}
+          <span className="bg-gray-100 text-gray-600 px-2 py-1 rounded text-xs">
+            {file.data.courseCode || "NO COURSE CODE"}
           </span>
         </div>
       </div>
 
-      <div className="flex gap-2 opacity-0 group-hover:opacity-100">
+      {/* Fix 3: Use hidden group-hover:flex so it takes no space until hover */}
+      <div className="hidden group-hover:flex gap-2 ml-4">
         <Button
           variant="ghost"
           size="icon"

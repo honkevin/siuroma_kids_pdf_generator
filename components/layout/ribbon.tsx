@@ -1,11 +1,12 @@
-// components/layout/ribbon.tsx
-
 "use client";
 
 import type React from "react";
+import { useState, useEffect } from "react";
 import { Input } from "@/components/ui/input";
-import { Save } from "lucide-react";
-import { FormDataType } from "@/app/page";
+import { Save, Loader2 } from "lucide-react";
+import { FormDataType } from "@/app/page"; // Ensure this path matches your project
+import { db } from "@/lib/firebase"; // Ensure this matches your firebase config path
+import { collection, getDocs, doc, getDoc } from "firebase/firestore";
 
 interface RibbonProps {
   data: FormDataType;
@@ -13,18 +14,92 @@ interface RibbonProps {
   onSave: () => void;
 }
 
+// Helper to format date + timeSlot into datetime-local string
+const formatLessonDate = (dateStr: string, timeSlot?: string) => {
+  let timePart = "00:00";
+  // Extract time like "14:00" from "SAT 14:00 - 16:00"
+  if (timeSlot) {
+    const match = timeSlot.match(/(\d{2}:\d{2})/);
+    if (match) timePart = match[1];
+  }
+  // Return YYYY-MM-DDTHH:MM
+  return `${dateStr}T${timePart}`;
+};
+
 export function Ribbon({ data, onChange, onSave }: RibbonProps) {
-  // Determine mode
   const isCoursePlan = data.type === "course_plan";
+
+  // State for autocomplete
+  const [availableCourses, setAvailableCourses] = useState<string[]>([]);
+  const [isLoadingCourse, setIsLoadingCourse] = useState(false);
+
+  // 1. Fetch all course IDs (e.g. SPEC_C001) on mount for the autocomplete list
+  useEffect(() => {
+    const fetchCourses = async () => {
+      try {
+        const querySnapshot = await getDocs(collection(db, "courses"));
+        const codes = querySnapshot.docs.map((d) => d.id);
+        setAvailableCourses(codes);
+      } catch (e) {
+        console.error("Failed to load course list", e);
+      }
+    };
+    fetchCourses();
+  }, []);
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
   ) => {
-    onChange(e.target.name as keyof FormDataType, e.target.value);
+    const { name, value } = e.target;
+    onChange(name as keyof FormDataType, value);
+
+    // 2. Trigger course load if the input is Course Code and matches a valid ID
+    if (name === "courseCode") {
+      checkAndLoadCourse(value);
+    }
+  };
+
+  // Logic to fetch and fill lessons
+  const checkAndLoadCourse = async (code: string) => {
+    // Only fetch if the code exists in our list (exact match)
+    if (!availableCourses.includes(code)) return;
+
+    setIsLoadingCourse(true);
+    try {
+      const docRef = doc(db, "courses", code);
+      const docSnap = await getDoc(docRef);
+
+      if (docSnap.exists()) {
+        const courseData = docSnap.data();
+        const rawLessons = courseData.lessons || [];
+        const timeSlot = courseData.timeSlot || "";
+
+        // Map the Firebase lesson structure to your UI structure
+        const mappedLessons = rawLessons.map((l: any) => ({
+          name: l.name,
+          dateTime: formatLessonDate(l.dateStr, timeSlot),
+        }));
+
+        // Update the lessons array in the form data
+        // Note: This relies on the parent's onChange handling array values correctly
+        onChange("lessons", mappedLessons);
+      }
+    } catch (err) {
+      console.error("Error loading course details:", err);
+    } finally {
+      setIsLoadingCourse(false);
+    }
   };
 
   return (
     <div className="bg-white border-b border-gray-300 shadow-sm px-6 h-[110px] mt-px flex items-center gap-4 overflow-x-auto whitespace-nowrap z-40 min-h-[100px]">
+      {/* Defines the autocomplete options globally for this component */}
+      <datalist id="course-options-list">
+        {availableCourses.map((code) => (
+          <option key={code} value={code} />
+        ))}
+      </datalist>
+
       {/* Group: Actions */}
       <div className="flex flex-col gap-2 items-center justify-center h-full pt-4 pb-1.5 px-2">
         <button
@@ -44,9 +119,8 @@ export function Ribbon({ data, onChange, onSave }: RibbonProps) {
 
       <Separator />
 
-      {/* Group: Document Details (Dynamic Label) */}
+      {/* Group: Document Details */}
       <RibbonGroup label={isCoursePlan ? "Plan Details" : "Receipt Details"}>
-        {/* Only show Receipt No for Receipts */}
         {!isCoursePlan && (
           <RibbonInput
             label="Receipt No."
@@ -57,7 +131,6 @@ export function Ribbon({ data, onChange, onSave }: RibbonProps) {
             placeholder="2025-001"
           />
         )}
-
         <RibbonInput
           label="Issue Date"
           name="issueDate"
@@ -72,7 +145,6 @@ export function Ribbon({ data, onChange, onSave }: RibbonProps) {
 
       {/* Group: Student */}
       <RibbonGroup label="Student Information">
-        {/* Only show Student Code for Receipts */}
         {!isCoursePlan && (
           <RibbonInput
             label="Student Code"
@@ -82,7 +154,6 @@ export function Ribbon({ data, onChange, onSave }: RibbonProps) {
             width="w-24"
           />
         )}
-
         <RibbonInput
           label="Student Name"
           name="studentName"
@@ -90,7 +161,6 @@ export function Ribbon({ data, onChange, onSave }: RibbonProps) {
           onChange={handleChange}
           width="w-40"
         />
-
         <RibbonSelect
           label="Gender"
           name="gender"
@@ -107,15 +177,24 @@ export function Ribbon({ data, onChange, onSave }: RibbonProps) {
 
       <Separator />
 
-      {/* Group: Course */}
+      {/* Group: Course (Updated with Datalist and Loading State) */}
       <RibbonGroup label="Course Data">
-        <RibbonInput
-          label="Course Code"
-          name="courseCode"
-          value={data.courseCode}
-          onChange={handleChange}
-          width="w-24"
-        />
+        <div className="relative">
+          <RibbonInput
+            label="Course Code"
+            name="courseCode"
+            value={data.courseCode}
+            onChange={handleChange}
+            width="w-full"
+            list="course-options-list" // Connects to the datalist
+            placeholder="Type code..."
+          />
+          {isLoadingCourse && (
+            <div className="absolute right-1 top-6">
+              <Loader2 className="w-3 h-3 animate-spin text-blue-500" />
+            </div>
+          )}
+        </div>
       </RibbonGroup>
 
       <Separator />
@@ -143,7 +222,7 @@ export function Ribbon({ data, onChange, onSave }: RibbonProps) {
   );
 }
 
-// --- Helper Components (Unchanged) ---
+// --- Helper Components (Slight modifications for types) ---
 
 function RibbonGroup({
   label,
@@ -170,6 +249,7 @@ function RibbonInput({
   type = "text",
   width = "w-24",
   placeholder,
+  list, // Added list prop for datalist support
 }: {
   label: string;
   name: string;
@@ -178,6 +258,7 @@ function RibbonInput({
   type?: string;
   width?: string;
   placeholder?: string;
+  list?: string;
 }) {
   return (
     <div className="flex flex-col gap-1.5">
@@ -190,6 +271,7 @@ function RibbonInput({
         value={value}
         onChange={onChange}
         placeholder={placeholder}
+        list={list} // Applied here
         className={`h-7 text-xs border-gray-300 rounded-sm focus-visible:ring-1 focus-visible:ring-blue-500 px-2 ${width}`}
       />
     </div>

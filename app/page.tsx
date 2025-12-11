@@ -1,5 +1,3 @@
-// page.tsx
-
 "use client";
 
 import React, { useState, useRef, useEffect, useLayoutEffect } from "react";
@@ -7,7 +5,7 @@ import { TopBar, Tab } from "@/components/layout/top-bar";
 import { Ribbon } from "@/components/layout/ribbon";
 import { FileExplorer } from "@/components/file-explorer";
 import { ReceiptPreview, Lesson } from "@/components/receipt/receipt-preview";
-import { CoursePlanPreview } from "@/components/receipt/course-plan-preview"; // Imported
+import { CoursePlanPreview } from "@/components/receipt/course-plan-preview";
 import { ZoomIn, ZoomOut, Download, FileText, Calendar } from "lucide-react";
 import {
   AlertDialog,
@@ -21,11 +19,24 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 
+// 🔥 Firestore imports
+import {
+  collection,
+  doc,
+  getDocs,
+  orderBy,
+  query,
+  setDoc,
+  deleteDoc,
+} from "firebase/firestore";
+import { db } from "@/lib/firebase";
+
+// ---------- Types ----------
 export interface FormDataType {
-  type?: "receipt" | "course_plan"; // Added type discriminator
-  receiptNo?: string; // Optional
+  type?: "receipt" | "course_plan";
+  receiptNo?: string;
   studentName: string;
-  studentCode: string; // Always string, not optional
+  studentCode: string;
   gender: string;
   issueDate: string;
   courseCode: string;
@@ -48,6 +59,7 @@ interface SavedFile {
   data: FormDataType;
 }
 
+// ---------- Constants ----------
 const DEFAULT_LESSONS = Array(12).fill({ name: "", dateTime: "" });
 
 const NEW_RECEIPT_TEMPLATE: FormDataType = {
@@ -66,35 +78,57 @@ const NEW_RECEIPT_TEMPLATE: FormDataType = {
 const NEW_COURSE_PLAN_TEMPLATE: FormDataType = {
   type: "course_plan",
   studentName: "",
-  studentCode: "", // Added to fix type error
+  studentCode: "",
   gender: "",
   issueDate: new Date().toISOString().split("T")[0],
   courseCode: "",
   lessons: DEFAULT_LESSONS,
   paymentMethod: "",
   paymentDate: "",
-  // Explicitly omitting receiptNo
 };
 
-// Initial View Constants
 const INITIAL_ZOOM = 1.1;
 const INITIAL_SCROLL_TOP = 0;
 
+// ---------- Component ----------
 export default function App() {
-  // --- Persistent Storage ---
+  // --- Persistent Storage (state) ---
   const [savedFiles, setSavedFiles] = useState<SavedFile[]>([]);
 
+  // 🔥 Load from Firestore on mount
   useEffect(() => {
+    // optional: fast local cache first
     const stored = localStorage.getItem("rc_saved_files");
     if (stored) {
       try {
         setSavedFiles(JSON.parse(stored));
       } catch (e) {
-        console.error("Load failed", e);
+        console.error("Local load failed", e);
       }
     }
+
+    const fetchFromFirestore = async () => {
+      try {
+        const q = query(
+          collection(db, "entries"),
+          orderBy("lastModified", "desc")
+        );
+        const snap = await getDocs(q);
+        const files: SavedFile[] = snap.docs.map((d) => {
+          const data = d.data() as Omit<SavedFile, "id">;
+          return { id: d.id, ...data };
+        });
+        setSavedFiles(files);
+        localStorage.setItem("rc_saved_files", JSON.stringify(files));
+      } catch (e) {
+        console.error("Firestore load failed", e);
+      }
+    };
+
+    fetchFromFirestore();
   }, []);
 
+  // Helper to keep state + localStorage in sync
   const persistFiles = (files: SavedFile[]) => {
     setSavedFiles(files);
     localStorage.setItem("rc_saved_files", JSON.stringify(files));
@@ -108,17 +142,15 @@ export default function App() {
   const [zoom, setZoom] = useState(INITIAL_ZOOM);
   const [isExporting, setIsExporting] = useState(false);
   const [showSaveConfirm, setShowSaveConfirm] = useState(false);
-  const [isNewEntryDialogOpen, setIsNewEntryDialogOpen] = useState(false); // New State
+  const [isNewEntryDialogOpen, setIsNewEntryDialogOpen] = useState(false);
 
   const [tempExportData, setTempExportData] = useState<FormDataType | null>(
     null
   );
 
-  // Refs
   const exportRef = useRef<HTMLDivElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
-  // Computed
   const activeTab = tabs.find((t) => t.id === activeTabId);
   const activeIndex = activeTab
     ? tabs.findIndex((t) => t.id === activeTabId)
@@ -148,8 +180,7 @@ export default function App() {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [activeTabId, isFilesView, hasActiveTab, tabs]);
 
-  // --- PDF Generation Logic ---
-
+  // --- PDF logic ---
   useEffect(() => {
     if (tempExportData && exportRef.current) {
       const timer = setTimeout(() => {
@@ -203,8 +234,7 @@ export default function App() {
     setTempExportData(file.data);
   };
 
-  // --- Tab Switching & State Persistence Logic ---
-
+  // --- Tab switching / zoom / scroll ---
   useLayoutEffect(() => {
     if (hasActiveTab && !isFilesView) {
       setZoom(activeTab.zoom);
@@ -230,7 +260,6 @@ export default function App() {
     }
   };
 
-  // --- Trackpad Zoom Logic ---
   useEffect(() => {
     const container = scrollContainerRef.current;
     if (!container) return;
@@ -255,9 +284,7 @@ export default function App() {
     };
   }, [hasActiveTab, activeTab, isFilesView]);
 
-  // --- Actions ---
-
-  // Opens the dialog instead of creating immediately
+  // --- Actions / CRUD ---
   const handleNewEntry = () => {
     setIsNewEntryDialogOpen(true);
   };
@@ -316,10 +343,11 @@ export default function App() {
     setShowSaveConfirm(true);
   };
 
-  const executeSave = () => {
+  // 🔥 Save to Firestore
+  const executeSave = async () => {
     if (!hasActiveTab) return;
 
-    const fileId = activeTab.savedFileId || Date.now().toString();
+    const fileId = activeTab.savedFileId || crypto.randomUUID();
     const title =
       activeTab.data.studentName ||
       activeTab.data.receiptNo ||
@@ -334,6 +362,17 @@ export default function App() {
       data: activeTab.data,
     };
 
+    try {
+      await setDoc(doc(collection(db, "entries"), fileId), {
+        title: newFile.title,
+        lastModified: newFile.lastModified,
+        data: newFile.data,
+      });
+    } catch (e) {
+      console.error("Firestore save failed", e);
+    }
+
+    // Update local cache + tabs
     const existingIdx = savedFiles.findIndex((f) => f.id === fileId);
     const newFileList = [...savedFiles];
     if (existingIdx >= 0) {
@@ -369,26 +408,55 @@ export default function App() {
     setIsFilesView(false);
   };
 
-  const handleDeleteFile = (id: string) => {
+  const handleDeleteFile = async (id: string) => {
     const newFiles = savedFiles.filter((f) => f.id !== id);
     persistFiles(newFiles);
+
+    try {
+      await deleteDoc(doc(db, "entries", id));
+      console.log("Entry deleted from Firestore");
+    } catch (e) {
+      console.error("Failed to delete from Firestore", e);
+    }
   };
 
-  const handleDuplicateFile = (file: SavedFile) => {
-    const newFile = {
+  // 🔥 UPDATED: Duplicate functionality with Firestore support
+  const handleDuplicateFile = async (file: SavedFile) => {
+    // 1. Prepare new data
+    const newId = crypto.randomUUID(); // Generate unique ID
+    const newTitle = `${file.title} (Copy)`;
+    const timestamp = Date.now();
+
+    const newFile: SavedFile = {
       ...file,
-      id: Date.now().toString(),
-      title: `${file.title} (Copy)`,
-      lastModified: Date.now(),
+      id: newId,
+      title: newTitle,
+      lastModified: timestamp,
+      // Create a shallow copy of data to ensure we don't mutate state unexpectedly
+      data: { ...file.data },
     };
+
+    // 2. Optimistic UI update (update list immediately)
     persistFiles([newFile, ...savedFiles]);
+
+    // 3. Write to Firestore
+    try {
+      await setDoc(doc(db, "entries", newId), {
+        title: newFile.title,
+        lastModified: newFile.lastModified,
+        data: newFile.data,
+      });
+      console.log("Duplicate saved to Firestore successfully");
+    } catch (e) {
+      console.error("Failed to duplicate file in Firestore", e);
+      // Optional: alert user or rollback state if needed
+    }
   };
 
   const handleToggleFilesView = () => {
     if (isFilesView) {
-      // Going from Files -> Editor: if no tabs, create one
       if (tabs.length === 0) {
-        handleNewEntry(); // This now opens the dialog
+        handleNewEntry();
       } else {
         setIsFilesView(false);
       }
@@ -399,7 +467,6 @@ export default function App() {
 
   const showEditor = !isFilesView && hasActiveTab;
 
-  // Helper to choose which preview component to render
   const renderPreview = (data: FormDataType, isExport = false) => {
     if (data.type === "course_plan") {
       return <CoursePlanPreview formData={data} isExport={isExport} />;
@@ -408,6 +475,7 @@ export default function App() {
     return <ReceiptPreview formData={receiptData} isExport={isExport} />;
   };
 
+  // ---------- JSX ----------
   return (
     <div className="h-screen w-screen flex flex-col bg-[#f3f4f6] overflow-hidden">
       <TopBar
@@ -438,6 +506,7 @@ export default function App() {
           />
 
           <div className="flex-1 relative overflow-hidden flex flex-col">
+            {/* Zoom / PDF bar */}
             <div className="absolute bottom-6 right-6 z-50 flex items-center gap-2 bg-[#2d2d2d] text-white px-3 py-1.5 rounded-full shadow-lg text-xs">
               <button
                 onClick={() => updateZoom(zoom - 0.1)}
@@ -488,7 +557,7 @@ export default function App() {
         </>
       )}
 
-      {/* Hidden Render Target for PDF */}
+      {/* Hidden PDF target */}
       <div className="absolute top-0 left-0 -z-50 opacity-0 pointer-events-none overflow-hidden h-0 w-0">
         <div ref={exportRef} className="w-[794px] h-[1123px] bg-white">
           {renderPreview(
@@ -522,6 +591,7 @@ export default function App() {
         </AlertDialogContent>
       </AlertDialog>
 
+      {/* New Entry Type Dialog */}
       <AlertDialog
         open={isNewEntryDialogOpen}
         onOpenChange={(open) => setIsNewEntryDialogOpen(open)}

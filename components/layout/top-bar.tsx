@@ -39,9 +39,9 @@ export function TopBar({
   return (
     <header className="h-10 bg-[#1b1b1b] flex items-end px-4 gap-4 select-none z-50">
       {/* 1. App Title / Logo */}
-      <div className="flex items-center h-full pb-0.5 mr-2">
-        <span className="text-white font-bold text-sm tracking-wide">
-          Siuroma Kids Admin
+      <div className="flex items-center h-full pb-0.5">
+        <span className="text-white font-medium text-sm tracking-wide">
+          Siuroma Kids Entry Manager
         </span>
       </div>
 
