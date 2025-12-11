@@ -104,7 +104,7 @@ export function Ribbon({ data, onChange, onSave }: RibbonProps) {
       <div className="flex flex-col gap-2 items-center justify-center h-full pt-4 pb-1.5 px-2">
         <button
           onClick={onSave}
-          className="flex flex-col items-center justify-center gap-1 h-12 w-14 rounded hover:bg-blue-50 text-gray-700 hover:text-blue-600 transition-colors cursor-pointer active:scale-95 group"
+          className="flex flex-col items-center justify-center gap-1 h-16 w-14 rounded hover:bg-blue-50 text-gray-700 hover:text-blue-600 transition-colors cursor-pointer active:scale-95 group"
           title="Save (Ctrl+S)"
         >
           <Save className="w-6 h-6 mb-0.5" />

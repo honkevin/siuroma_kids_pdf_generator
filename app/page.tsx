@@ -350,7 +350,7 @@ export default function Home() {
                   style={{
                     width: PAGE_WIDTH * zoom,
                     height: PAGE_HEIGHT * zoom,
-                    transition: "width 0.1s ease-out, height 0.1s ease-out",
+                    // REMOVED transition here to fix the shaking
                   }}
                   className="relative shrink-0 shadow-2xl bg-white"
                 >
@@ -362,7 +362,7 @@ export default function Home() {
                     style={{
                       transform: `scale(${zoom})`,
                       transformOrigin: "top left",
-                      transition: "transform 0.1s ease-out",
+                      // REMOVED transition here to fix the shaking
                     }}
                     className="origin-top-left"
                   >

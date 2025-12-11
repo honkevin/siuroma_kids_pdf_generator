@@ -1,5 +1,3 @@
-// components/receipt/receipt-preview.tsx
-
 "use client";
 
 import Image from "next/image";
@@ -132,14 +130,23 @@ export function ReceiptPreview({
       {/* ---------------- Header ---------------- */}
       <div className="flex w-full justify-between items-start">
         <div className="shrink-0">
-          <Image
-            src={logo}
-            alt="Company Logo"
-            width={120}
-            height={60}
-            className="h-auto"
-            priority={false}
-          />
+          {/* FIX: Use standard img tag during export to prevent massive rendering */}
+          {isExport ? (
+            <img
+              src={logo.src}
+              alt="Company Logo"
+              style={{ width: "120px", height: "auto" }}
+            />
+          ) : (
+            <Image
+              src={logo}
+              alt="Company Logo"
+              width={120}
+              height={60}
+              className="h-auto"
+              priority={false}
+            />
+          )}
         </div>
 
         <div className="flex w-full justify-end">
