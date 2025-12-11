@@ -9,6 +9,7 @@ export interface FormDataType {
   studentName: string;
   studentCode: string;
   gender: string;
+  parentContact: string;
   issueDate: string;
   courseCode: string;
   lessons: Lesson[];
@@ -43,6 +44,7 @@ export const NEW_RECEIPT_TEMPLATE: FormDataType = {
   studentName: "",
   studentCode: "",
   gender: "",
+  parentContact: "",
   issueDate: new Date().toISOString().split("T")[0],
   courseCode: "",
   lessons: DEFAULT_LESSONS,
@@ -55,6 +57,7 @@ export const NEW_COURSE_PLAN_TEMPLATE: FormDataType = {
   studentName: "",
   studentCode: "",
   gender: "",
+  parentContact: "",
   issueDate: new Date().toISOString().split("T")[0],
   courseCode: "",
   lessons: DEFAULT_LESSONS,

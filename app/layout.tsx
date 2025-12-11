@@ -7,7 +7,7 @@ import "./globals.css";
 const fredoka = Fredoka({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "Siuroma Kids PDF Generator",
+  title: "Siuroma Kids Entry Manager",
   description: "Generate receipts for kindergarten education program",
   generator: "v0.app",
   icons: {

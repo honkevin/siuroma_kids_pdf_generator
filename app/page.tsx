@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useRef, useEffect, useLayoutEffect } from "react";
+import { useState, useRef, useEffect, useLayoutEffect } from "react";
 import { TopBar } from "@/components/layout/top-bar";
 import { Ribbon } from "@/components/layout/ribbon";
 import { FileExplorer } from "@/components/file-explorer";

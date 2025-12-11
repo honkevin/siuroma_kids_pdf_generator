@@ -15,6 +15,7 @@ export interface FormDataType {
   studentName: string;
   studentCode?: string;
   gender: string;
+  parentContact: string;
   issueDate: string;
   courseCode: string;
   lessons: Lesson[];
@@ -175,6 +176,7 @@ export function CoursePlanPreview({
                 {formData.studentName}
               </span>
             </div>
+            <div>Parent Contact: {formData.parentContact}</div>
           </div>
           {/* Right Column */}
           <div className={`${textSizes.bodyText} ${spacing.tightListSpacing}`}>

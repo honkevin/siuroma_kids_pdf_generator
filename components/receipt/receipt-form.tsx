@@ -13,6 +13,7 @@ export interface FormDataType {
   studentName: string;
   studentCode?: string;
   gender: string;
+  parentContact: string;
   issueDate: string;
   courseCode: string;
   lessons: Array<{ name: string; dateTime: string }>;
@@ -188,6 +189,13 @@ export function ReceiptForm({ formData, setFormData }: ReceiptFormProps) {
             value={formData.gender}
             onChange={handleChange}
             placeholder="M / F / Other"
+          />
+          <FormField
+            label="Parent Contact"
+            name="parentContact"
+            value={formData.parentContact}
+            onChange={handleChange}
+            placeholder="Phone or email"
           />
 
           {/* Modified Course Code Field with Autocomplete */}

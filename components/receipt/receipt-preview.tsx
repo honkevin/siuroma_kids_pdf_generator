@@ -13,6 +13,7 @@ export interface FormDataType {
   studentName: string;
   studentCode: string;
   gender: string;
+  parentContact: string;
   issueDate: string;
   courseCode: string;
   lessons: Lesson[];
@@ -194,6 +195,7 @@ export function ReceiptPreview({
                 {formData.studentName}
               </span>
             </div>
+            <div>Parent Contact: {formData.parentContact}</div>
           </div>
           <div className={`${textSizes.bodyText} ${spacing.tightListSpacing}`}>
             <div>Student Code: {formData.studentCode}</div>

@@ -173,6 +173,13 @@ export function Ribbon({ data, onChange, onSave }: RibbonProps) {
             { value: "F", label: "F" },
           ]}
         />
+        <RibbonInput
+          label="Parent Contact"
+          name="parentContact"
+          value={data.parentContact}
+          onChange={handleChange}
+          width="w-40"
+        />
       </RibbonGroup>
 
       <Separator />
