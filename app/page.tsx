@@ -18,7 +18,6 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 
-// Imports from root folders
 import {
   FormDataType,
   ReceiptTab,
@@ -30,6 +29,8 @@ import { useFileSystem } from "@/hooks/use-filesystem";
 
 const INITIAL_ZOOM = 1.1;
 const INITIAL_SCROLL_TOP = 0;
+const PAGE_WIDTH = 794;
+const PAGE_HEIGHT = 1123;
 
 export default function Home() {
   // --- Logic Hook ---
@@ -220,7 +221,7 @@ export default function Home() {
   const updateZoom = (newZoomVal: number) => {
     const clamped = Math.min(Math.max(0.3, newZoomVal), 2.5);
     setZoom(clamped);
-    if (hasActiveTab) activeTab.zoom = clamped;
+    if (hasActiveTab && activeTab) activeTab.zoom = clamped;
   };
 
   useLayoutEffect(() => {
@@ -232,6 +233,31 @@ export default function Home() {
       }, 0);
     }
   }, [activeTabId, isFilesView]);
+
+  // --- Trackpad pinch / ctrl+wheel zoom ---
+  useEffect(() => {
+    const el = scrollContainerRef.current;
+    if (!el) return;
+
+    const handleWheel = (e: WheelEvent) => {
+      if (e.ctrlKey || e.metaKey) {
+        e.preventDefault();
+        const delta = -e.deltaY;
+        const zoomStep = 0.008;
+        const newZoom = Math.min(Math.max(0.3, zoom + delta * zoomStep), 2.5);
+
+        setZoom(newZoom);
+        if (hasActiveTab && activeTab) {
+          activeTab.zoom = newZoom;
+        }
+      }
+    };
+
+    el.addEventListener("wheel", handleWheel, { passive: false });
+    return () => {
+      el.removeEventListener("wheel", handleWheel);
+    };
+  }, [zoom, hasActiveTab, activeTab]);
 
   const renderPreview = (data: FormDataType, isExport = false) => {
     if (data.type === "course_plan") {
@@ -290,7 +316,7 @@ export default function Home() {
               </button>
               <div className="w-px h-4 bg-gray-600 mx-1" />
               <button
-                onClick={() => generatePdf(activeTab.data)}
+                onClick={() => generatePdf(activeTab!.data)}
                 disabled={isExporting}
                 className="flex items-center gap-1 hover:text-green-300 disabled:opacity-50 cursor-pointer"
               >
@@ -299,25 +325,51 @@ export default function Home() {
               </button>
             </div>
 
+            {/* Scroll Container */}
             <div
               ref={scrollContainerRef}
               onScroll={(e) => {
                 if (hasActiveTab)
                   activeTab.scrollTop = e.currentTarget.scrollTop;
               }}
-              className="flex-1 overflow-auto flex justify-center p-10 bg-[#e5e7eb]"
+              className="flex-1 overflow-auto bg-[#e5e7eb]"
             >
-              <div
-                style={{
-                  transform: `scale(${zoom})`,
-                  transformOrigin: "top center",
-                  transition: "transform 0.1s ease-out",
-                  marginBottom: "50px",
-                }}
-                className="shadow-2xl"
-              >
-                <div className="w-[794px] h-[1123px] bg-white text-black relative">
-                  {renderPreview(activeTab!.data)}
+              {/* 
+                Inner Wrapper:
+                - min-h-full ensures the container is at least the full height, 
+                  so padding-bottom pushes against the bottom of the viewport.
+                - flex & items-center handles centering of the content.
+              */}
+              <div className="min-h-full w-full flex flex-col items-center p-10">
+                {/* 
+                  Sizer Wrapper:
+                  - Explicitly sets the layout size to match the zoom. 
+                  - This forces the scrollbars to match the visual size.
+                */}
+                <div
+                  style={{
+                    width: PAGE_WIDTH * zoom,
+                    height: PAGE_HEIGHT * zoom,
+                    transition: "width 0.1s ease-out, height 0.1s ease-out",
+                  }}
+                  className="relative shrink-0 shadow-2xl bg-white"
+                >
+                  {/* 
+                    Transformed Content:
+                    - Uses top-left origin to fit perfectly into the sizer wrapper.
+                  */}
+                  <div
+                    style={{
+                      transform: `scale(${zoom})`,
+                      transformOrigin: "top left",
+                      transition: "transform 0.1s ease-out",
+                    }}
+                    className="origin-top-left"
+                  >
+                    <div className="w-[794px] h-[1123px] bg-white text-black">
+                      {renderPreview(activeTab!.data)}
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
