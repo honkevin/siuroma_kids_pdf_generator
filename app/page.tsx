@@ -89,9 +89,9 @@ function ReceiptContent() {
       <Section title="Price">
         <Grid2Col>
           <Stack>
-            <InfoRow label="Section Price">section price</InfoRow>
-            <InfoRow label="Discount">discount</InfoRow>
-            <InfoRow label="Coupon">coupon</InfoRow>
+            <InfoRow label="Section Price">HKD 3480.00</InfoRow>
+            <InfoRow label="Discount">HKD 960.00</InfoRow>
+            <InfoRow label="Coupon">HKD 0.00</InfoRow>
           </Stack>
           <Stack>
             <InfoRow label="Paid Amount" bold>

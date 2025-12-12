@@ -886,7 +886,7 @@ export function EntriesWorkspace({
             </AlertDialogCancel>
             <AlertDialogAction
               onClick={executeSave}
-              className="bg-blue-600 hover:bg-blue-700"
+              className="bg-blue-600 hover:bg-blue-700 cursor-pointer"
             >
               Confirm Save
             </AlertDialogAction>
