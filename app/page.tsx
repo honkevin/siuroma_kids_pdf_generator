@@ -3,7 +3,6 @@
 import "./globals.css";
 
 import {
-  DocumentEditor,
   Section,
   Stack,
   Grid2Col,
@@ -11,16 +10,10 @@ import {
   InfoRow,
   LessonList,
   Input,
-  useDoc,
-} from "@/components/document-editor";
-import { EntriesWorkspace } from "@/components/entries-workspace";
-
-// --- Receipt layout, purely presentational over DocumentEditor context ---
+} from "@/components/entry-manager/document-editor";
+import { EntriesWorkspace } from "@/components/entry-manager/entries-workspace";
 
 function ReceiptContent() {
-  // No hook needed here anymore; DocumentEditor's courseCode input handles the fetching.
-  const { data } = useDoc();
-
   return (
     <>
       <Title>Receipt</Title>
@@ -29,36 +22,41 @@ function ReceiptContent() {
         <Grid2Col>
           <Stack>
             <InfoRow label="Receipt No">
-              <Input name="receiptNo" label="Receipt No" />
+              <Input name="receiptNo" />
             </InfoRow>
+
             <InfoRow label="Student Name">
-              <Input
-                name="studentName"
-                label="Student Name"
-                className="font-medium"
-              />
+              <Input name="studentName" className="font-medium" />
             </InfoRow>
+
             <InfoRow label="Student Code">
-              <Input name="studentCode" label="Student Code" />
+              {/* Updated to match the new Firebase mapping (studentId) */}
+              <Input name="studentId" />
             </InfoRow>
-            <InfoRow label="Gender">
+
+            <InfoRow label="Sex">
               <Input
-                name="gender"
-                label="Gender"
+                name="sex"
                 type="dropdown"
-                options={["Male", "Female"]}
+                options={[
+                  { label: "Male", value: "M" },
+                  { label: "Female", value: "F" },
+                ]}
               />
             </InfoRow>
           </Stack>
+
           <Stack>
             <InfoRow label="Issue Date">
-              <Input name="issueDate" label="Issue Date" type="date" />
+              <Input name="issueDate" type="date" />
             </InfoRow>
+
             <InfoRow label="Course Code">
-              <Input name="courseCode" label="Course Code" />
+              <Input name="courseCode" />
             </InfoRow>
+
             <InfoRow label="Course Name">
-              <span className="font-medium">COURSE NAME</span>
+              <Input name="courseName" />
             </InfoRow>
           </Stack>
         </Grid2Col>
@@ -93,19 +91,18 @@ function ReceiptContent() {
             <InfoRow label="Discount">HKD 960.00</InfoRow>
             <InfoRow label="Coupon">HKD 0.00</InfoRow>
           </Stack>
+
           <Stack>
             <InfoRow label="Paid Amount" bold>
               HKD 2,880.00
             </InfoRow>
+
             <InfoRow label="Payment Method">
-              <Input name="paymentMethod" label="Payment Method" />
+              <Input name="paymentMethod" />
             </InfoRow>
+
             <InfoRow label="Payment Date">
-              <Input
-                name="paymentDate"
-                label="Payment Date"
-                type="datetime-local"
-              />
+              <Input name="paymentDate" type="datetime-local" />
             </InfoRow>
           </Stack>
         </Grid2Col>
@@ -127,6 +124,7 @@ function ReceiptContent() {
               </li>
             </ul>
           </Stack>
+
           <Stack>
             <p className="font-semibold">Refunds</p>
             <ul>
@@ -142,11 +140,7 @@ function ReceiptContent() {
   );
 }
 
-// --- Course plan layout, also purely presentational ---
-
 function CoursePlanContent() {
-  const { data } = useDoc();
-
   return (
     <>
       <Title>Course Plan</Title>
@@ -155,31 +149,34 @@ function CoursePlanContent() {
         <Grid2Col>
           <Stack>
             <InfoRow label="Student Name">
-              <Input
-                name="studentName"
-                label="Student Name"
-                className="font-medium"
-              />
+              <Input name="studentName" className="font-medium" />
             </InfoRow>
+
             <InfoRow label="Parent Contact">
-              <Input name="parentContact" label="Parent Contact" />
+              <Input name="parentContact" />
             </InfoRow>
-            <InfoRow label="Gender">
+
+            <InfoRow label="Sex">
               <Input
-                name="gender"
-                label="Gender"
+                name="sex"
                 type="dropdown"
-                options={["Male", "Female"]}
+                options={[
+                  { label: "Male", value: "M" },
+                  { label: "Female", value: "F" },
+                ]}
               />
             </InfoRow>
           </Stack>
+
           <Stack>
             <InfoRow label="Issue Date">
-              <Input name="issueDate" label="Issue Date" type="date" />
+              <Input name="issueDate" type="date" />
             </InfoRow>
+
             <InfoRow label="Course Code">
-              <Input name="courseCode" label="Course Code" />
+              <Input name="courseCode" />
             </InfoRow>
+
             <InfoRow label="Course Name">
               <span className="font-medium">COURSE NAME</span>
             </InfoRow>
@@ -215,6 +212,7 @@ function CoursePlanContent() {
             <InfoRow label="Total Price">HKD 2,620.000</InfoRow>
             <InfoRow label="Discount">HKD 740.00</InfoRow>
           </Stack>
+
           <Stack>
             <InfoRow label="Discount Due Date" bold>
               31st August
@@ -240,6 +238,7 @@ function CoursePlanContent() {
               </li>
             </ul>
           </Stack>
+
           <Stack>
             <p className="font-semibold">Refunds</p>
             <ul>
@@ -256,7 +255,6 @@ function CoursePlanContent() {
 }
 
 // --- Page: hand layouts to the EntriesWorkspace container ---
-
 export default function Page() {
   return (
     <EntriesWorkspace

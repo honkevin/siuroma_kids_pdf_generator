@@ -1,152 +1,113 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 
-@font-face {
-  font-family: "Noto Sans SC";
-  src: url("https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;700&display=swap");
-}
-
+/* Design tokens (shadcn-style) */
 :root {
-  /* Replaced all oklch colors with hex equivalents for html2canvas/html2pdf compatibility */
-  --background: #ffffff;
-  --foreground: #262626;
-  --card: #ffffff;
-  --card-foreground: #262626;
-  --popover: #ffffff;
-  --popover-foreground: #262626;
-  --primary: #1f2937;
-  --primary-foreground: #fafafa;
-  --secondary: #f7f7f7;
-  --secondary-foreground: #1f2937;
-  --muted: #f7f7f7;
-  --muted-foreground: #8e8e8e;
-  --accent: #f7f7f7;
-  --accent-foreground: #1f2937;
-  --destructive: #ff5252;
-  --destructive-foreground: #ff5252;
-  --border: #ebebeb;
-  --input: #ebebeb;
-  --ring: #b4b4b4;
-  --chart-1: #f97316;
-  --chart-2: #0ea5e9;
-  --chart-3: #8b5cf6;
-  --chart-4: #eab308;
-  --chart-5: #ec4899;
-  --radius: 0.625rem;
-  --sidebar: #fafafa;
-  --sidebar-foreground: #262626;
-  --sidebar-primary: #1f2937;
-  --sidebar-primary-foreground: #fafafa;
-  --sidebar-accent: #f7f7f7;
-  --sidebar-accent-foreground: #1f2937;
-  --sidebar-border: #ebebeb;
-  --sidebar-ring: #b4b4b4;
+  --font-sans: "Fredoka", "Fredoka Fallback";
+
+  --background: 0 0% 100%;
+  --foreground: 222.2 84% 4.9%;
+
+  --card: 0 0% 100%;
+  --card-foreground: 222.2 84% 4.9%;
+
+  --popover: 0 0% 100%;
+  --popover-foreground: 222.2 84% 4.9%;
+
+  --primary: 222.2 47.4% 11.2%;
+  --primary-foreground: 210 40% 98%;
+
+  --secondary: 210 40% 96.1%;
+  --secondary-foreground: 222.2 47.4% 11.2%;
+
+  --muted: 210 40% 96.1%;
+  --muted-foreground: 215.4 16.3% 46.9%;
+
+  --accent: 210 40% 96.1%;
+  --accent-foreground: 222.2 47.4% 11.2%;
+
+  --destructive: 0 84.2% 60.2%;
+  --destructive-foreground: 210 40% 98%;
+
+  --border: 214.3 31.8% 91.4%;
+  --input: 214.3 31.8% 91.4%;
+  --ring: 221.2 83.2% 53.3%;
+
+  --radius: 0.875rem;
 }
 
 .dark {
-  --background: #262626;
-  --foreground: #fafafa;
-  --card: #262626;
-  --card-foreground: #fafafa;
-  --popover: #262626;
-  --popover-foreground: #fafafa;
-  --primary: #fafafa;
-  --primary-foreground: #1f2937;
-  --secondary: #454545;
-  --secondary-foreground: #fafafa;
-  --muted: #454545;
-  --muted-foreground: #b4b4b4;
-  --accent: #454545;
-  --accent-foreground: #fafafa;
-  --destructive: #d64545;
-  --destructive-foreground: #e3a9a9;
-  --border: #454545;
-  --input: #454545;
-  --ring: #707070;
-  --chart-1: #7c3aed;
-  --chart-2: #06b6d4;
-  --chart-3: #ec4899;
-  --chart-4: #f97316;
-  --chart-5: #f59e0b;
-  --sidebar: #1f2937;
-  --sidebar-foreground: #fafafa;
-  --sidebar-primary: #7c3aed;
-  --sidebar-primary-foreground: #fafafa;
-  --sidebar-accent: #454545;
-  --sidebar-accent-foreground: #fafafa;
-  --sidebar-border: #454545;
-  --sidebar-ring: #707070;
+  --background: 222.2 84% 4.9%;
+  --foreground: 210 40% 98%;
+
+  --card: 222.2 84% 4.9%;
+  --card-foreground: 210 40% 98%;
+
+  --popover: 222.2 84% 4.9%;
+  --popover-foreground: 210 40% 98%;
+
+  --primary: 210 40% 98%;
+  --primary-foreground: 222.2 47.4% 11.2%;
+
+  --secondary: 217.2 32.6% 17.5%;
+  --secondary-foreground: 210 40% 98%;
+
+  --muted: 217.2 32.6% 17.5%;
+  --muted-foreground: 215 20.2% 65.1%;
+
+  --accent: 217.2 32.6% 17.5%;
+  --accent-foreground: 210 40% 98%;
+
+  --destructive: 0 62.8% 30.6%;
+  --destructive-foreground: 210 40% 98%;
+
+  --border: 217.2 32.6% 17.5%;
+  --input: 217.2 32.6% 17.5%;
+  --ring: 224.3 76.3% 48%;
 }
 
-@theme inline {
-  --font-sans: "Fredoka", "Fredoka Fallback";
-  --font-mono: "Geist Mono", "Geist Mono Fallback";
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --color-card: var(--card);
-  --color-card-foreground: var(--card-foreground);
-  --color-popover: var(--popover);
-  --color-popover-foreground: var(--popover-foreground);
-  --color-primary: var(--primary);
-  --color-primary-foreground: var(--primary-foreground);
-  --color-secondary: var(--secondary);
-  --color-secondary-foreground: var(--secondary-foreground);
-  --color-muted: var(--muted);
-  --color-muted-foreground: var(--muted-foreground);
-  --color-accent: var(--accent);
-  --color-accent-foreground: var(--accent-foreground);
-  --color-destructive: var(--destructive);
-  --color-destructive-foreground: var(--destructive-foreground);
-  --color-border: var(--border);
-  --color-input: var(--input);
-  --color-ring: var(--ring);
-  --color-chart-1: var(--chart-1);
-  --color-chart-2: var(--chart-2);
-  --color-chart-3: var(--chart-3);
-  --color-chart-4: var(--chart-4);
-  --color-chart-5: var(--chart-5);
+/* Tailwind v4: map your CSS vars to actual Tailwind color tokens */
+@theme {
+  --color-background: hsl(var(--background));
+  --color-foreground: hsl(var(--foreground));
+
+  --color-card: hsl(var(--card));
+  --color-card-foreground: hsl(var(--card-foreground));
+
+  --color-popover: hsl(var(--popover));
+  --color-popover-foreground: hsl(var(--popover-foreground));
+
+  --color-primary: hsl(var(--primary));
+  --color-primary-foreground: hsl(var(--primary-foreground));
+
+  --color-secondary: hsl(var(--secondary));
+  --color-secondary-foreground: hsl(var(--secondary-foreground));
+
+  --color-muted: hsl(var(--muted));
+  --color-muted-foreground: hsl(var(--muted-foreground));
+
+  --color-accent: hsl(var(--accent));
+  --color-accent-foreground: hsl(var(--accent-foreground));
+
+  --color-destructive: hsl(var(--destructive));
+  --color-destructive-foreground: hsl(var(--destructive-foreground));
+
+  --color-border: hsl(var(--border));
+  --color-input: hsl(var(--input));
+  --color-ring: hsl(var(--ring));
+
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
-  --color-sidebar: var(--sidebar);
-  --color-sidebar-foreground: var(--sidebar-foreground);
-  --color-sidebar-primary: var(--sidebar-primary);
-  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
-  --color-sidebar-accent: var(--sidebar-accent);
-  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
-  --color-sidebar-border: var(--sidebar-border);
-  --color-sidebar-ring: var(--sidebar-ring);
 }
 
 @layer base {
   * {
     @apply border-border outline-ring/50;
   }
+
   body {
     @apply bg-background text-foreground;
   }
-}
-
-.chinese {
-  font-family: "Noto Sans CJK", sans-serif;
-}
-
-:root {
-  --grid-color: #97d6f7;
-}
-
-li {
-  list-style: none;
-  position: relative;
-  padding-left: 1rem;
-  margin-left: 0.5rem;
-}
-
-li::before {
-  content: "•";
-  position: absolute;
-  left: 0;
-  font-size: 2rem;
-  line-height: 1.1rem;
 }
